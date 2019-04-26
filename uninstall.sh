@@ -1,4 +1,5 @@
-conf_path=/data/media/0/Android/dnscrypt-proxy
+source ${0%/*}/script.constant.sh
+conf_path=${CONFIG%/*}
 if [ ! -e conf_path/reserved ]
 then
   rm -r conf_path

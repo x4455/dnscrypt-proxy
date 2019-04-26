@@ -1,5 +1,4 @@
 #!/system/bin/sh
-# >常量
 IPTABLES=/system/bin/iptables
 IP6TABLES=/system/bin/ip6tables
 

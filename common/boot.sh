@@ -11,7 +11,8 @@ while (("$retry" > "0")) || [ "`getprop init.svc.bootanim`" != "stopped" ]; do
 done
 
 log() {
-LOG_PATH=$(grep '^CONFIG=/' /system/xbin/dnsproxy | awk -F '=' '{print $2}'); LOG_PATH="${LOG_PATH%/*}/boot.log"
+source $MODDIR/script.constant.sh
+LOG_PATH="${CONFIG%/*}/boot.log"
 [ -f $LOG_PATH ] \
   && mv $LOG_PATH $LOG_PATH.old
 echo "Service Start - $(date +'%d/ %r')">$LOG_PATH
