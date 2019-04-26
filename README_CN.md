@@ -39,8 +39,11 @@
   ```
 
 ## 配置 (安装后)
-- 配置存储于 `/data/media/0/Android/dnscrypt-proxy` ，你可以对其进行调整
-- 有关更详细的配置，请参阅 [官方文档](https://github.com/jedisct1/dnscrypt-proxy/wiki/Configuration)
+- 默认配置，存储于 `/data/media/dnscrypt-proxy` ，你可以对其进行调整
+- 有关更详细的配置，请参阅[官方文档](https://github.com/jedisct1/dnscrypt-proxy/wiki/Configuration)或使用[其他预设](https://github.com/jedisct1/dnscrypt-proxy/wiki/Public-blacklists)
+
+[CNMan/dnscrypt-proxy-config](https://github.com/CNMan/dnscrypt-proxy-config) 针对中国用户的广泛且不断更新的黑名单，转发和隐藏规则。
+由 [CNMan](https://github.com/CNMan) 维护
 
 ## 更新日志
 - [Core 更新日志](https://github.com/jedisct1/dnscrypt-proxy/blob/master/ChangeLog)

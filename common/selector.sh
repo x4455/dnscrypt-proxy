@@ -79,6 +79,7 @@ if $VKSEL; then
   mode="Auto"
   cp -af $TMPDIR/boot.sh $MODPATH/boot.sh
   cp -af $TMPDIR/script.sh $MODPATH/system/xbin/dnsproxy
+  cp -af $TMPDIR/script.constant.sh $MODPATH/script.constant.sh
   cp -af $TMPDIR/Core $MODPATH/dnsproxy_core
   $NEW_INSTALL && { echo "# 53 port whitelist"; echo "# whitelist = ()" >> $NEW_CONFIG_PATH/example-forwarding-rules.txt; }
 else

@@ -3,24 +3,20 @@
 [[ "$#" -eq 0 ]] && { echo "Null input"; exit 1; }
 [[ $(id -u) -ne 0 ]] && { echo "Need root permission"; exit 1; }
 
-IPTABLES=/system/bin/iptables
-IP6TABLES=/system/bin/ip6tables
-CONFIG=/data/media/0/Android/dnscrypt-proxy/dnscrypt-proxy.toml
 MODPATH=/data/adb/modules/dnscrypt-proxy
-CORE_BINARY=dnsproxy_core
-CORE_PATH=$MODPATH/$CORE_BINARY
+source $MODPATH/script.constant.sh
 
-get() { grep $1 $CONFIG; }
-[ $(get 'ipv6_server' | awk -F = '{print $2}') == 'true' -a -f /proc/net/ip6_tables_names ] && IPv6_S=true || IPv6_S=false
-LISTEN_PORT="`get 'listen_addresses' | awk -F "[:']" '{print $3}'`"
-FALLBACK_RESOLVER="`get 'fallback_resolver' | awk -F "[':]" '{print $2}'`"
+gconf(){ grep $1 $CONFIG; }
+[ $(gconf 'ipv6_server' | awk -F = '{print $2}') == 'true' -a -f /proc/net/ip6_tables_names ] && IPv6_S=true || IPv6_S=false
+LISTEN_PORT="`gconf 'listen_addresses' | awk -F "[:']" '{print $3}'`"
+FALLBACK_RESOLVER="`gconf 'fallback_resolver' | awk -F "[':]" '{print $2}'`"
 
 Wlist=('1.1.1.1' '1.0.0.1')
-if [ ! -n "`get '#.*forwarding_rules'`" ]; then
- cache=$(get 'forwarding_rules' | awk -F "\'" '{print $2}')
+if [ ! -n "`gconf '#.*forwarding_rules'`" ]; then
+ cache=$(gconf 'forwarding_rules' | awk -F "\'" '{print $2}')
  [ -n "`echo $cache | grep '/'`" ] && list_FILE=$cache || list_FILE=${CONFIG%/*}/$cache
  cache=$(grep -E 'whitelist.=' $list_FILE | awk -F "[()]" '{print $2}')
-  i="${#Wlist[*]}"; OLD_IFS="$IFS"; IFS=","; array=($cache); IFS="$OLD_IFS"; cache=false
+ i="${#Wlist[*]}"; OLD_IFS="$IFS"; IFS=","; array=($cache); IFS="$OLD_IFS"; cache=false
   for cache in ${array[*]}; do
    Wlist[i]=$cache; ((i++))
   done
@@ -58,9 +54,7 @@ iptrules_wlist_check(){
 [ $r -gt 0 ] && return 0
 }
 
-core_check(){
- [ -n "`pgrep $CORE_BINARY`" ] && return 0
-}
+core_check(){ [ -n "`pgrep $CORE_BINARY`" ] && return 0; }
 
 iptrules_check(){
  IPT=$IPTABLES; IPA='127.0.0.1'; r=0
@@ -99,22 +93,26 @@ else
 fi
 }
 
+core_boot(){
+  core_check && killall $CORE_BINARY
+  sleep 0.5
+  echo "- $(date +'%d: %r') - Start proxy"
+  nohup $CORE_PATH -config $CONFIG &
+}
+
 ###
 for opt in $*
 do
  case $opt in
   -start)
-  core_check && killall $CORE_BINARY
   iptrules_off
-  echo "- $(date +'%d: %r') - Start proxy"
-  nohup $CORE_PATH -config $CONFIG &
+  core_boot
   sleep 9
   core_check && { iptrules_on; }||{ echo '! Fails !'; exit 1; }
   ;;
   -start_core)
-  core_check && killall $CORE_BINARY
-  echo "- $(date +'%d: %r') - Start proxy"
-  nohup $CORE_PATH -config $CONFIG &
+  core_boot
+  sleep 5
   ;;
   -stop)
   echo '- Stop proxy'
@@ -132,10 +130,10 @@ cat <<EOD
 dnsproxy [string]
 -start  Start dnscrypt-proxy
 -stop  Stop dnscrypt-proxy
--status  proxy Status
+-status  Proxy Status
+-start_core  Boot core only
 --reset  Reset iptables
 --switch  Switch set
---config  Set config file Path
 EOD
   ;;
 ####
@@ -159,19 +157,7 @@ EOD
    whitelist)  switch="whitelist\.txt";;
    *)  echo "- Invalid input \"${switch}\""; exit 1;;
   esac
-  switch_set "`get "#.*${switch}"`" $switch
-  ;;
-  --config)
-  echo -n "Now enter the path: "
-  read -r config
-  [ ! -n "`echo $config | grep '/'`" ] && { echo '- Invalid input'; exit 1; }
-  echo "- The path will be modified to: ${config}"
-  echo -n "- Confirm modification? (y/n): "
-  read -r Ans
-  if echo "$Ans" | grep -i y; then
-   sed -i "/^CONFIG/s/.*/CONFIG=${config}/" ${0}
-   echo '- Done'
-  fi
+  switch_set "`gconf "#.*${switch}"`" $switch
   ;;
   -*)
   echo "- Invalid input \"$opt\""

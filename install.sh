@@ -153,7 +153,7 @@ install_dnscrypt_proxy(){
   esac
 
   NEW_INSTALL=false
-  OLD_CONFIG_PATH=/data/media/0/Android/dnscrypt-proxy
+  OLD_CONFIG_PATH=/data/media/dnscrypt-proxy
   NEW_CONFIG_PATH=$OLD_CONFIG_PATH
   EXAMPLE_CONFIG_PATH=$TMPDIR/config
   LISTEN_PORT=5354

@@ -37,8 +37,8 @@ Just flash and forget.
   ```
 
 ## Configuration (post-installing)
-- Configuration located on `/data/media/0/Android/dnscrypt-proxy`
-- For more detailed configuration please refer to [official documentation](https://github.com/jedisct1/dnscrypt-proxy/wiki/Configuration)
+- Default configuration, located on `/data/media/dnscrypt-proxy`
+- For more detailed configuration please refer to [official documentation](https://github.com/jedisct1/dnscrypt-proxy/wiki/Configuration) Or use [other presets](https://github.com/jedisct1/dnscrypt-proxy/wiki/Public-blacklists)
 
 ## ChangeLog
 - [Core ChangeLog](https://github.com/jedisct1/dnscrypt-proxy/blob/master/ChangeLog)
