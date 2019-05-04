@@ -133,12 +133,13 @@ print_modname() {
 # Copy/extract your module files into $MODPATH in on_install.
 
 on_install() {
+  [ $MAGISK_VER_CODE -lt "18100" ] && abort '! Please upgrade to Magisk 18.1'
   # The following is the default implementation: extract $ZIPFILE/system to $MODPATH
   # Extend/change the logic to whatever you want
   ui_print "- Extracting module files"
   unzip -o "$ZIPFILE" 'system/*' -d $MODPATH >&2
 
-  [ $API -ge 28 ] && { ui_print "! Please close the Private DNS to prevent conflict"; }
+  [ $API -ge 28 ] && { ui_print '! Please close the Private DNS to prevent conflict'; }
   install_dnscrypt_proxy
 }
 
@@ -158,7 +159,7 @@ install_dnscrypt_proxy(){
   EXAMPLE_CONFIG_PATH=$TMPDIR/config
   LISTEN_PORT=5354
 
-  unzip -o "$ZIPFILE" 'binary/*' 'config/*' -d $TMPDIR 2>/dev/null
+  unzip -o "$ZIPFILE" 'binary/*' 'config/*' -d $TMPDIR >&2
 
   mkdir -p $MODPATH/system/xbin 2>/dev/null
 
@@ -190,7 +191,27 @@ install_dnscrypt_proxy(){
    cp -f $EXAMPLE_CONFIG_PATH/example-dnscrypt-proxy.toml $NEW_CONFIG_PATH/example-dnscrypt-proxy.toml
   fi
 
-  . $TMPDIR/selector.sh
+  source $TMPDIR/selector.sh
+ui_print " "
+ui_print " Vol Key+ = Automatic mode"
+ui_print " Vol Key- = Manual mode"
+ 
+if $VKSEL; then
+  mode="Auto"
+  cp -af $TMPDIR/script.sh $MODPATH/system/xbin/dnsproxy
+  cp -af $TMPDIR/constant.sh $MODPATH/constant.sh
+  cp -af $TMPDIR/Core $MODPATH/dnsproxy_core
+  $NEW_INSTALL && { echo -e "# 53 port whitelist\n# whitelist = ()" >> $NEW_CONFIG_PATH/example-forwarding-rules.txt; }
+else
+  mode="Manual"
+  LATESTARTSERVICE=false
+  cp -af $TMPDIR/Core $MODPATH/system/xbin/dnscrypt-proxy
+  sed -i -e "s/'127.0.0.1.*'/'127.0.0.1:53', '[::1]:53'/g" $NEW_CONFIG_PATH/dnscrypt-proxy.toml
+fi
+
+ui_print "* Use $mode mode"
+sed -i -e "s/<MODE>/${mode}/g" $TMPDIR/module.prop
+
 }
 
 # Only some special files require specific permissions

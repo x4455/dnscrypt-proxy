@@ -1,4 +1,4 @@
-#!/sbin/sh
+#!/system/bin/sh
 # Modified by x4455 @ github
 # External Tools
 keytest() {
@@ -70,24 +70,3 @@ case $(echo $(basename $ZIPFILE) | tr '[:upper:]' '[:lower:]') in
      fi;;
 esac
 IFS=$OIFS
-
-ui_print " "
-ui_print " Vol Key+ = Automatic mode"
-ui_print " Vol Key- = Manual mode"
- 
-if $VKSEL; then
-  mode="Auto"
-  cp -af $TMPDIR/boot.sh $MODPATH/boot.sh
-  cp -af $TMPDIR/script.sh $MODPATH/system/xbin/dnsproxy
-  cp -af $TMPDIR/script.constant.sh $MODPATH/script.constant.sh
-  cp -af $TMPDIR/Core $MODPATH/dnsproxy_core
-  $NEW_INSTALL && { echo "# 53 port whitelist"; echo "# whitelist = ()" >> $NEW_CONFIG_PATH/example-forwarding-rules.txt; }
-else
-  mode="Manual"
-  LATESTARTSERVICE=false
-  cp -af $TMPDIR/Core $MODPATH/system/xbin/dnscrypt-proxy
-  sed -i -e "s/'127.0.0.1.*'/'127.0.0.1:53', '[::1]:53'/g" $NEW_CONFIG_PATH/dnscrypt-proxy.toml
-fi
-
-ui_print "* Use $mode mode"
-sed -i -e "s/<MODE>/${mode}/g" $TMPDIR/module.prop

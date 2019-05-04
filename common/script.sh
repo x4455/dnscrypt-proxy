@@ -4,7 +4,7 @@
 [[ $(id -u) -ne 0 ]] && { echo "Need root permission"; exit 1; }
 
 MODPATH=/data/adb/modules/dnscrypt-proxy
-source $MODPATH/script.constant.sh
+source $MODPATH/constant.sh
 
 gconf(){ grep $1 $CONFIG; }
 [ $(gconf 'ipv6_server' | awk -F = '{print $2}') == 'true' -a -f /proc/net/ip6_tables_names ] && IPv6_S=true || IPv6_S=false
@@ -54,7 +54,9 @@ iptrules_wlist_check(){
 [ $r -gt 0 ] && return 0
 }
 
-core_check(){ [ -n "`pgrep $CORE_BINARY`" ] && return 0; }
+core_check(){
+[ -n "`pgrep $CORE_BINARY`" ] && return 0
+}
 
 iptrules_check(){
  IPT=$IPTABLES; IPA='127.0.0.1'; r=0
@@ -108,11 +110,18 @@ do
   iptrules_off
   core_boot
   sleep 9
-  core_check && { iptrules_on; }||{ echo '! Fails !'; exit 1; }
+  if core_check; then
+   iptrules_on
+  else
+   echo 'Fails !'; exit 1
+  fi
   ;;
   -start_core)
   core_boot
-  sleep 5
+  sleep 9
+  if [ ! core_check ]; then
+   echo 'Fails !'; exit 1
+  fi
   ;;
   -stop)
   echo '- Stop proxy'
