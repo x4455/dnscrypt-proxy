@@ -145,13 +145,15 @@ on_install() {
 
 # Script by bluemeda @ github
 # Modified by x4455 @ github
-install_dnscrypt_proxy(){
+install_dnscrypt_proxy() {
   case $ARCH in
   arm|arm64|x86|x64)
     BINARY_PATH=$TMPDIR/binary/dnscrypt-proxy-$ARCH;;
   *)
     abort "! $ARCH are unsupported architecture !"
   esac
+
+  source $TMPDIR/constant.sh
 
   NEW_INSTALL=false
   OLD_CONFIG_PATH=/data/media/dnscrypt-proxy
@@ -164,11 +166,11 @@ install_dnscrypt_proxy(){
   mkdir -p $MODPATH/system/xbin 2>/dev/null
 
   if [ -f "$BINARY_PATH" ]; then
-    ui_print " Architecture: [$ARCH]"
+    ui_print "- Architecture: [$ARCH]"
     cp -af $BINARY_PATH $TMPDIR/Core
     set_perm $TMPDIR/Core 0 0 0755
     ver=$($TMPDIR/Core -version)
-    ui_print " Core version: [$ver]"
+    ui_print "- Core version: [$ver]"
     sed -i -e "s/<VER>/${ver}-${ARCH}/g" $TMPDIR/module.prop
   else
     abort "! $ARCH Binary file missing !"
@@ -177,22 +179,21 @@ install_dnscrypt_proxy(){
   if [ $(ls $OLD_CONFIG_PATH | wc -l) -eq 0 ]; then
    NEW_INSTALL=true
    if [ -d "$EXAMPLE_CONFIG_PATH" ]; then
-    ui_print "* Create config path"
+    ui_print "- Create config path"
     mkdir -p $NEW_CONFIG_PATH 2>/dev/null
-    ui_print "* Copy the example config file"
+    ui_print "- Copy the example config file"
     cp -rf $EXAMPLE_CONFIG_PATH/* $NEW_CONFIG_PATH
    else
     abort "! Example config file is missing !"
    fi
-    cp -f $EXAMPLE_CONFIG_PATH/example-dnscrypt-proxy.toml $NEW_CONFIG_PATH/dnscrypt-proxy.toml
-    sed -i -e "s/127.0.0.1:53/127.0.0.1:${LISTEN_PORT}/g" $NEW_CONFIG_PATH/dnscrypt-proxy.toml
-    sed -i -e "s/\[::1\]:53/\[::1\]:${LISTEN_PORT}/g" $NEW_CONFIG_PATH/dnscrypt-proxy.toml
+   cp -f $EXAMPLE_CONFIG_PATH/example-dnscrypt-proxy.toml $NEW_CONFIG_PATH/dnscrypt-proxy.toml
   else
    cp -f $EXAMPLE_CONFIG_PATH/example-dnscrypt-proxy.toml $NEW_CONFIG_PATH/example-dnscrypt-proxy.toml
   fi
 
-  source $TMPDIR/selector.sh
+source $TMPDIR/selector.sh
 ui_print " "
+ui_print "- Select the mode of operation"
 ui_print " Vol Key+ = Automatic mode"
 ui_print " Vol Key- = Manual mode"
  
@@ -200,16 +201,15 @@ if $VKSEL; then
   mode="Auto"
   cp -af $TMPDIR/script.sh $MODPATH/system/xbin/dnsproxy
   cp -af $TMPDIR/constant.sh $MODPATH/constant.sh
-  cp -af $TMPDIR/Core $MODPATH/dnsproxy_core
-  $NEW_INSTALL && { echo -e "# 53 port whitelist\n# whitelist = ()" >> $NEW_CONFIG_PATH/example-forwarding-rules.txt; }
+  cp -af $TMPDIR/Core $MODPATH/$CORE_BINARY
+  $NEW_INSTALL && { sed -i -e "s/127.0.0.1:53/127.0.0.1:${LISTEN_PORT}/g" $NEW_CONFIG_PATH/dnscrypt-proxy.toml; sed -i -e "s/\[::1\]:53/\[::1\]:${LISTEN_PORT}/g" $NEW_CONFIG_PATH/dnscrypt-proxy.toml; echo -e "# 53 port whitelist\n# whitelist = ()" >> $NEW_CONFIG_PATH/example-forwarding-rules.txt; }
 else
   mode="Manual"
   LATESTARTSERVICE=false
   cp -af $TMPDIR/Core $MODPATH/system/xbin/dnscrypt-proxy
-  sed -i -e "s/'127.0.0.1.*'/'127.0.0.1:53', '[::1]:53'/g" $NEW_CONFIG_PATH/dnscrypt-proxy.toml
 fi
 
-ui_print "* Use $mode mode"
+ui_print "- Use $mode mode"
 sed -i -e "s/<MODE>/${mode}/g" $TMPDIR/module.prop
 
 }

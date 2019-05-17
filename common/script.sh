@@ -7,7 +7,7 @@ MODPATH=/data/adb/modules/dnscrypt-proxy
 source $MODPATH/constant.sh
 
 gconf(){ grep $1 $CONFIG; }
-[ $(gconf 'ipv6_server' | awk -F = '{print $2}') == 'true' -a -f /proc/net/ip6_tables_names ] && IPv6_S=true || IPv6_S=false
+[ -f /proc/net/ip6_tables_names ] && IPv6_S=true || IPv6_S=false
 LISTEN_PORT="`gconf 'listen_addresses' | awk -F "[:']" '{print $3}'`"
 FALLBACK_RESOLVER="`gconf 'fallback_resolver' | awk -F "[':]" '{print $2}'`"
 
@@ -40,7 +40,7 @@ iptrules_load(){
   if [ $IPT == $IPTABLES ]; then
    $IPT -t nat $IPS OUTPUT -p $IPP ! -d ${FALLBACK_RESOLVER} --dport 53 -j DNAT --to-destination $IPA:$LISTEN_PORT
   else
-   $IPT -t nat $IPS OUTPUT -p $IPP --dport 53 -j DNAT --to-destination $IPA:$LISTEN_PORT
+   $IPT -t raw $IPS OUTPUT -p $IPP --dport 53 -j DNAT --to-destination $IPA:$LISTEN_PORT
   fi
  done
 }
@@ -147,9 +147,8 @@ EOD
   ;;
 ####
   --reset)
-  while [ -n "`$IPTABLES -n -t nat -L OUTPUT | grep "0.0.0.0/0"`" ]; do
-   $IPTABLES -t nat -D OUTPUT 1
-  done
+  $IPTABLES -t nat -F OUTPUT
+  $IP6TABLES -t raw -F OUTPUT
   echo '- Done'
   ;;
   --switch)
