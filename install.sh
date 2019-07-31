@@ -1,27 +1,10 @@
-##########################################################################################
-#
-# Magisk Module TMPDIR Script
-#
-##########################################################################################
-##########################################################################################
-#
-# Instructions:
-#
-# 1. Place your files into system folder (delete the placeholder file)
-# 2. Fill in your module's info into module.prop
-# 3. Configure and implement callbacks in this file
-# 4. If you need boot scripts, add them into common/post-fs-data.sh or common/service.sh
-# 5. Add your additional or modified system properties into common/system.prop
-#
-##########################################################################################
 
 ##########################################################################################
 # Config Flags
 ##########################################################################################
 
 # Set to true if you do *NOT* want Magisk to mount
-# any files for you. Most modules would NOT want
-# to set this flag to true
+# any files for you.
 SKIPMOUNT=false
 
 # Set to true if you need to load system.prop
@@ -39,15 +22,6 @@ LATESTARTSERVICE=true
 
 # List all directories you want to directly replace in the system
 # Check the documentations for more info why you would need this
-
-# Construct your list in the following format
-# This is an example
-REPLACE_EXAMPLE="
-/system/app/Youtube
-/system/priv-app/SystemUI
-/system/priv-app/Settings
-/system/framework
-"
 
 # Construct your own list here
 REPLACE="
@@ -67,13 +41,6 @@ REPLACE="
 #
 ##########################################################################################
 ##########################################################################################
-#
-# The installation framework will export some variables and functions.
-# You should use these variables and functions for installation.
-#
-# ! DO NOT use any Magisk internal paths as those are NOT public API.
-# ! DO NOT use other functions in util_functions.sh as they are NOT public API.
-# ! Non public APIs are not guranteed to maintain compatibility between releases.
 #
 # Available variables:
 #
@@ -130,98 +97,105 @@ print_modname() {
   ui_print "*******************************"
 }
 
-# Copy/extract your module files into $MODPATH in on_install.
-
 on_install() {
-  [ $MAGISK_VER_CODE -lt "18100" ] && abort '! Please upgrade to Magisk 18.1'
   # The following is the default implementation: extract $ZIPFILE/system to $MODPATH
   # Extend/change the logic to whatever you want
   ui_print "- Extracting module files"
   unzip -o "$ZIPFILE" 'system/*' -d $MODPATH >&2
 
-  [ $API -ge 28 ] && { ui_print '! Please close the Private DNS to prevent conflict'; }
+  [ $API -ge 28 ] && {
+  ui_print "***************"
+  ui_print '(!) Please close the Private DNS to prevent conflict'
+  ui_print "***************"
+  }
+
+  imageless_magisk && { OLDDIR="$NVBASE/modules/$MODID"; }||{ OLDDIR="/sbin/.magisk/img/$MODID"; }
+
   install_dnscrypt_proxy
 }
 
-# Script by bluemeda @ github
-# Modified by x4455 @ github
+
 install_dnscrypt_proxy() {
   case $ARCH in
   arm|arm64|x86|x64)
-    BINARY_PATH=$TMPDIR/binary/dnscrypt-proxy-$ARCH;;
+    BINARY_PATH=$TMPDIR/dnscrypt-proxy-$ARCH;;
   *)
-    abort "! $ARCH are unsupported architecture !"
+    abort "(!) $ARCH are unsupported architecture"
   esac
 
-  source $TMPDIR/constant.sh
+  unzip -oj "$ZIPFILE" 'binary/*' -d $TMPDIR >&2
+  CONSTANT="$OLDDIR/constant.sh"
+  [ -e $CONSTANT ] && { source $CONSTANT; }||{ source $TMPDIR/constant.sh; CONSTANT=$TMPDIR/constant.sh; }
 
-  NEW_INSTALL=false
-  OLD_CONFIG_PATH=/data/media/dnscrypt-proxy
+  OLD_CONFIG_PATH=${CONFIG%/*}
   NEW_CONFIG_PATH=$OLD_CONFIG_PATH
   EXAMPLE_CONFIG_PATH=$TMPDIR/config
   LISTEN_PORT=5354
 
-  unzip -o "$ZIPFILE" 'binary/*' 'config/*' -d $TMPDIR >&2
+  unzip -o "$ZIPFILE" 'config/*' -d $TMPDIR >&2
 
   mkdir -p $MODPATH/system/xbin 2>/dev/null
 
   if [ -f "$BINARY_PATH" ]; then
     ui_print "- Architecture: [$ARCH]"
-    cp -af $BINARY_PATH $TMPDIR/Core
-    set_perm $TMPDIR/Core 0 0 0755
-    ver=$($TMPDIR/Core -version)
+    set_perm $BINARY_PATH 0 0 0755
+    ver=$($BINARY_PATH -v)
+    ver=$($BINARY_PATH -version)
     ui_print "- Core version: [$ver]"
     sed -i -e "s/<VER>/${ver}-${ARCH}/g" $TMPDIR/module.prop
   else
-    abort "! $ARCH Binary file missing !"
+    abort "(!) $ARCH Binary file missing"
   fi
-
+  ui_print "***************"
+# Config
+  if [ ! -d "$EXAMPLE_CONFIG_PATH" ]; then
+    abort "(!) Example config file is missing"
+  fi
   if [ $(ls $OLD_CONFIG_PATH | wc -l) -eq 0 ]; then
-   NEW_INSTALL=true
-   if [ -d "$EXAMPLE_CONFIG_PATH" ]; then
+    NEW_INSTALL=true
     ui_print "- Create config path"
     mkdir -p $NEW_CONFIG_PATH 2>/dev/null
     ui_print "- Copy the example config file"
     cp -rf $EXAMPLE_CONFIG_PATH/* $NEW_CONFIG_PATH
-   else
-    abort "! Example config file is missing !"
-   fi
-   cp -f $EXAMPLE_CONFIG_PATH/example-dnscrypt-proxy.toml $NEW_CONFIG_PATH/dnscrypt-proxy.toml
+    cp -f $EXAMPLE_CONFIG_PATH/example-dnscrypt-proxy.toml $NEW_CONFIG_PATH/dnscrypt-proxy.toml
   else
-   cp -f $EXAMPLE_CONFIG_PATH/example-dnscrypt-proxy.toml $NEW_CONFIG_PATH/example-dnscrypt-proxy.toml
+    cp -f $EXAMPLE_CONFIG_PATH/example-dnscrypt-proxy.toml $NEW_CONFIG_PATH/example-dnscrypt-proxy.toml
+  fi
+# Set files
+  cp -af $CONSTANT $MODPATH/constant.sh
+  sed -i -e "s/\(^MODPATH\=\).*$/\1${OLDDIR//\//\\\/}/" $TMPDIR/script.sh
+  cp -af $TMPDIR/script.sh $MODPATH/system/xbin/dnsproxy
+  cp -af $BINARY_PATH $MODPATH/$CORE_BINARY
+  [ $NEW_INSTALL == "true" ] && {
+  sed -i -e "s/127.0.0.1:53/127.0.0.1:${LISTEN_PORT}/g" $NEW_CONFIG_PATH/dnscrypt-proxy.toml;
+  sed -i -e "s/\[::1\]:53/\[::1\]:${LISTEN_PORT}/g" $NEW_CONFIG_PATH/dnscrypt-proxy.toml; }
+
+  if [ ! -L $OLD_CONFIG_PATH/constant.conf ]; then
+    ln -s $MODPATH/constant.sh $NEW_CONFIG_PATH/constant.conf
   fi
 
+# Set boot
 source $TMPDIR/selector.sh
 ui_print " "
-ui_print "- Select the mode of operation"
-ui_print " Vol Key+ = Automatic mode"
-ui_print " Vol Key- = Manual mode"
- 
+ui_print "- Start after boot, Yes or No?"
+ui_print " Vol Key+ = Yes"
+ui_print " Vol Key- = No"
+ui_print " "
+
 if $VKSEL; then
-  mode="Auto"
-  cp -af $TMPDIR/script.sh $MODPATH/system/xbin/dnsproxy
-  cp -af $TMPDIR/constant.sh $MODPATH/constant.sh
-  cp -af $TMPDIR/Core $MODPATH/$CORE_BINARY
-  $NEW_INSTALL && { sed -i -e "s/127.0.0.1:53/127.0.0.1:${LISTEN_PORT}/g" $NEW_CONFIG_PATH/dnscrypt-proxy.toml; sed -i -e "s/\[::1\]:53/\[::1\]:${LISTEN_PORT}/g" $NEW_CONFIG_PATH/dnscrypt-proxy.toml; echo -e "# 53 port whitelist\n# whitelist = ()" >> $NEW_CONFIG_PATH/example-forwarding-rules.txt; }
+  ui_print "(i) Mod will start after boot."
 else
-  mode="Manual"
+  ui_print "(i) Mod will not start after boot."
   LATESTARTSERVICE=false
-  cp -af $TMPDIR/Core $MODPATH/system/xbin/dnscrypt-proxy
 fi
-
-ui_print "- Use $mode mode"
-sed -i -e "s/<MODE>/${mode}/g" $TMPDIR/module.prop
-
+ui_print " "
 }
 
-# Only some special files require specific permissions
-# This function will be called after on_install is done
-# The default permissions should be good enough for most cases
 
 set_permissions() {
   # The following is the default rule, DO NOT remove
   set_perm_recursive $MODPATH 0 0 0755 0644
-  set_perm $MODPATH/dnsproxy_core 0 0 0755
+  set_perm $MODPATH/$CORE_BINARY 0 2000 0755
   set_perm_recursive $MODPATH/system/xbin 0 0 0755 0755
 
   # Here are some examples:
@@ -230,5 +204,3 @@ set_permissions() {
   # set_perm  $MODPATH/system/bin/dex2oat         0     2000    0755      u:object_r:dex2oat_exec:s0
   # set_perm  $MODPATH/system/lib/libart.so       0     0       0644
 }
-
-# You can add more functions to assist your custom script code

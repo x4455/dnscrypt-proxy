@@ -16,39 +16,26 @@
 ## 安装选项
 ### 自动模式
 刷入，然后你就可以忘了它了
-- 文明上网时须把 DNS 设置为使用非53端口查询(例如 `127.0.0.1:5354` )或使用 `1.1.1.1:53`
 - 控制脚本
- 用法: dnsproxy {string}
- 常用命令: `-start` `-stop` `-help`
-### 手动模式
-- 对于ipv4，DNS 服务器地址为 `127.0.0.1:53`，对于ipv6，DNS 服务器地址为 `[::1]:53`
-- 如果您使用 [AfWall](https://github.com/ukanth/afwall/releases) ，则可以编写此自定义脚本
-  开启脚本
-  ```
-  iptables -t nat -A OUTPUT -p tcp ! -d 1.1.1.1 --dport 53 -j DNAT --to-destination 127.0.0.1:53
-  iptables -t nat -A OUTPUT -p udp ! -d 1.1.1.1 --dport 53 -j DNAT --to-destination 127.0.0.1:53
-  ip6tables -t nat -A OUTPUT -p tcp --dport 53 -j DNAT --to-destination [::1]:53
-  ip6tables -t nat -A OUTPUT -p udp --dport 53 -j DNAT --to-destination [::1]:53
-  ```
-  关闭脚本
-  ```
-  iptables -t nat -D OUTPUT -p tcp ! -d 1.1.1.1 --dport 53 -j DNAT --to-destination 127.0.0.1:53
-  iptables -t nat -D OUTPUT -p udp ! -d 1.1.1.1 --dport 53 -j DNAT --to-destination 127.0.0.1:53
-  ip6tables -t nat -D OUTPUT -p tcp --dport 53 -j DNAT --to-destination [::1]:53
-  ip6tables -t nat -D OUTPUT -p udp --dport 53 -j DNAT --to-destination [::1]:53
-  ```
+ 用法: dnsproxy [string]
+ 常用命令: `-start` `-stop` `-usage`
 
 ## 配置 (安装后)
-- 默认配置，存储于 `/data/media/dnscrypt-proxy` ，你可以对其进行调整
+- 主配置，存储于 `/data/media/dnscrypt-proxy`
+- 脚本配置，储存于 `/data/adb/modules/dnscrypt-proxy/constant.sh`
 - 有关更详细的配置，请参阅[官方文档](https://github.com/jedisct1/dnscrypt-proxy/wiki/Configuration)或使用[其他预设](https://github.com/jedisct1/dnscrypt-proxy/wiki/Public-blacklists)
 
 ## 更新日志
 - [Core 更新日志](https://github.com/jedisct1/dnscrypt-proxy/blob/master/ChangeLog)
-### v2.7.4
+### v2.8.7
+- 将二进制文件和示例配置更新为 2.0.25
+- 更新控制脚本
+### v2.7.5
+- 移除手动模式
 - 将二进制文件更新为 2.0.23
+- 更新控制脚本
 ### v2.7.3
-- 将二进制文件更新为 2.0.22
-- 更新示例配置
+- 将二进制文件和示例配置更新为 2.0.22
 - 适配 Magisk v19
 - 更新控制脚本
 ### v2.6.1
