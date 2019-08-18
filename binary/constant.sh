@@ -18,6 +18,16 @@ IPv4_whitelist_EXAMPLE="
 IPv4_whitelist="
 "
 
+# Clear the log after booting
+ClearList="
+dnscrypt-proxy.log
+query.log
+nx.log
+blocked.log
+ip-blocked.log
+whitelisted.log
+"
+
 # Constant (If you don't know what you are doing, don't modify it.)
 IPTABLES=/system/bin/iptables
 IP6TABLES=/system/bin/ip6tables
@@ -26,3 +36,4 @@ CONFIG="/data/media/dnscrypt-proxy/dnscrypt-proxy.toml"
 
 CORE_BINARY=dnsproxy-core
 CORE_PATH=$MODPATH/$CORE_BINARY
+CORE_BOOT="$CORE_PATH -config $CONFIG"  ## With "&"

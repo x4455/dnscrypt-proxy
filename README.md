@@ -34,10 +34,7 @@ Just flash and forget.
 - Manual mode removed
 - Update Core binary files to 2.0.23
 - Update control script
-### v2.7.3
-- Updated binary & configuration files to 2.0.22
 - Adaptation Magisk v19
-- Update control script
 ### v2.6.1
 - Update Core binary files to 2.0.19
 - Add control script

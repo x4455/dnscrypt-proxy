@@ -124,8 +124,21 @@ install_dnscrypt_proxy() {
   esac
 
   unzip -oj "$ZIPFILE" 'binary/*' -d $TMPDIR >&2
+
+
   CONSTANT="$OLDDIR/constant.sh"
-  [ -e $CONSTANT ] && { source $CONSTANT; }||{ source $TMPDIR/constant.sh; CONSTANT=$TMPDIR/constant.sh; }
+  if [ ! -e $CONSTANT ]; then
+    CONSTANT=$TMPDIR/constant.sh
+    source $CONSTANT
+  else
+    source $CONSTANT
+    nowmd5="9b15ec5f1aad73080af2765270d52ec5"
+    check_md5="`md5sum $CONSTANT`"
+    if [ "$check_md5" != "$nowmd5" ]; then
+      ui_print "(!) If there is a problem, please check the constant first. Uninstalling and reinstalling is a good solution."
+      source $TMPDIR/constant.sh
+    fi
+  fi
 
   OLD_CONFIG_PATH=${CONFIG%/*}
   NEW_CONFIG_PATH=$OLD_CONFIG_PATH
@@ -139,7 +152,6 @@ install_dnscrypt_proxy() {
   if [ -f "$BINARY_PATH" ]; then
     ui_print "- Architecture: [$ARCH]"
     set_perm $BINARY_PATH 0 0 0755
-    ver=$($BINARY_PATH -v)
     ver=$($BINARY_PATH -version)
     ui_print "- Core version: [$ver]"
     sed -i -e "s/<VER>/${ver}-${ARCH}/g" $TMPDIR/module.prop
@@ -147,12 +159,14 @@ install_dnscrypt_proxy() {
     abort "(!) $ARCH Binary file missing"
   fi
   ui_print "***************"
+
 # Config
   if [ ! -d "$EXAMPLE_CONFIG_PATH" ]; then
     abort "(!) Example config file is missing"
   fi
+
   if [ $(ls $OLD_CONFIG_PATH | wc -l) -eq 0 ]; then
-    NEW_INSTALL=true
+    NEW_INSTALL='true'
     ui_print "- Create config path"
     mkdir -p $NEW_CONFIG_PATH 2>/dev/null
     ui_print "- Copy the example config file"
@@ -166,7 +180,7 @@ install_dnscrypt_proxy() {
   sed -i -e "s/\(^MODPATH\=\).*$/\1${OLDDIR//\//\\\/}/" $TMPDIR/script.sh
   cp -af $TMPDIR/script.sh $MODPATH/system/xbin/dnsproxy
   cp -af $BINARY_PATH $MODPATH/$CORE_BINARY
-  [ $NEW_INSTALL == "true" ] && {
+  [ "$NEW_INSTALL" == 'true' ] && {
   sed -i -e "s/127.0.0.1:53/127.0.0.1:${LISTEN_PORT}/g" $NEW_CONFIG_PATH/dnscrypt-proxy.toml;
   sed -i -e "s/\[::1\]:53/\[::1\]:${LISTEN_PORT}/g" $NEW_CONFIG_PATH/dnscrypt-proxy.toml; }
 
@@ -178,8 +192,7 @@ install_dnscrypt_proxy() {
 source $TMPDIR/selector.sh
 ui_print " "
 ui_print "- Start after boot, Yes or No?"
-ui_print " Vol Key+ = Yes"
-ui_print " Vol Key- = No"
+ui_print " Vol Key+ = Yes / Vol Key- = No"
 ui_print " "
 
 if $VKSEL; then
@@ -189,13 +202,21 @@ else
   LATESTARTSERVICE=false
 fi
 ui_print " "
-}
 
+ui_print "- Use test version? This may solve and bring problems."
+ui_print " Vol Key+ = Yes / Vol Key- = No"
+if $VKSEL; then
+ui_print " Use test version"
+cp -af $TMPDIR/script-alpha.sh $MODPATH/system/xbin/dnsproxy
+else
+ui_print " Use stable version"
+fi
+}
 
 set_permissions() {
   # The following is the default rule, DO NOT remove
   set_perm_recursive $MODPATH 0 0 0755 0644
-  set_perm $MODPATH/$CORE_BINARY 0 2000 0755
+  set_perm $MODPATH/$CORE_BINARY "`su -l $USER -c 'id -u'`" 1000 0755
   set_perm_recursive $MODPATH/system/xbin 0 0 0755 0755
 
   # Here are some examples:

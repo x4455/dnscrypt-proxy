@@ -17,7 +17,10 @@ LOG_PATH="${CONFIG%/*}/boot.log"
 exec 1>>$LOG_PATH 2>&1
 set -x
 }
-rm ${CONFIG%/*}/dnscrypt-proxy.log
+for TARGET in $ClearList
+do
+  rm ${CONFIG%/*}/$TARGET
+done
 log
 
 echo "Start - $(date +'%d / %r')"
