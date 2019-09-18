@@ -109,7 +109,7 @@ on_install() {
   ui_print "***************"
   }
 
-  imageless_magisk && { OLDDIR="$NVBASE/modules/$MODID"; }||{ OLDDIR="/sbin/.magisk/img/$MODID"; }
+  imageless_magisk && { tmp="$NVBASE/modules/$MODID"; }||{ tmp="/sbin/.magisk/img/$MODID"; }
 
   install_dnscrypt_proxy
 }
@@ -126,7 +126,7 @@ install_dnscrypt_proxy() {
   unzip -oj "$ZIPFILE" 'binary/*' -d $TMPDIR >&2
 
 
-  CONSTANT="$OLDDIR/constant.sh"
+  CONSTANT="$tmp/constant.sh"
   if [ ! -e $CONSTANT ]; then
     CONSTANT=$TMPDIR/constant.sh
     source $CONSTANT
@@ -177,7 +177,7 @@ install_dnscrypt_proxy() {
   fi
 # Set files
   cp -af $CONSTANT $MODPATH/constant.sh
-  sed -i -e "s/\(^MODPATH\=\).*$/\1${OLDDIR//\//\\\/}/" $TMPDIR/script.sh
+  sed -i -e "s/\(^MODPATH\=\).*$/\1${tmp//\//\\\/}/" $TMPDIR/script.sh
   cp -af $TMPDIR/script.sh $MODPATH/system/xbin/dnsproxy
   cp -af $BINARY_PATH $MODPATH/$CORE_BINARY
   [ "$NEW_INSTALL" == 'true' ] && {
@@ -216,7 +216,7 @@ fi
 set_permissions() {
   # The following is the default rule, DO NOT remove
   set_perm_recursive $MODPATH 0 0 0755 0644
-  set_perm $MODPATH/$CORE_BINARY "`su -l $USER -c 'id -u'`" 1000 0755
+  set_perm $MODPATH/$CORE_BINARY 0 2000 0755
   set_perm_recursive $MODPATH/system/xbin 0 0 0755 0755
 
   # Here are some examples:
