@@ -27,8 +27,8 @@
 
 ## 更新日志
 - [Core 更新日志](https://github.com/jedisct1/dnscrypt-proxy/blob/master/ChangeLog)
-### v2.8.7
-- 将二进制文件和示例配置更新为 2.0.25
+### v2.9.0
+- 将二进制文件和示例配置更新为 2.0.27
 - 更新控制脚本
 ### v2.7.5
 - 移除手动模式

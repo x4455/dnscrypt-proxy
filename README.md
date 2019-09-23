@@ -27,8 +27,8 @@ Just flash and forget.
 
 ## ChangeLog
 - [Core ChangeLog](https://github.com/jedisct1/dnscrypt-proxy/blob/master/ChangeLog)
-### v2.8.9
-- Updated binary & configuration files to 2.0.26
+### v2.9.0
+- Updated binary & configuration files to 2.0.27
 - Update control script
 ### v2.7.5
 - Manual mode removed

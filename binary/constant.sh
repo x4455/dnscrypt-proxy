@@ -1,22 +1,17 @@
-# If you device are not supported "IPv6 nat", set this option to "false"
+# Listen port (Keep consistent with listen_addresses)
+V4LPT=5354
+V6LPT=5354
+
+# iptables block port 53 INPUT #
+ipt_block_INPUT=false
+whitelist="
+9.9.9.9
+"
+
+# If you device are not supported "IPv6 nat", set this option to "true"
 # and remove IPv6 from "listen_addresses" in the config file.
-#####
-#ipt_setIPv6=false
-
 # iptables block IPv6 port 53 #
-ipt_blockIPv6=false
-
-# IPv4 port 53 whitelist #
-# All use 53 port DNS in forwarding-rules,
-# need to be added to the whitelist.
-#This is an example
-IPv4_whitelist_EXAMPLE="
-1.1.1.1
-1.0.0.1
-"
-
-IPv4_whitelist="
-"
+ipt_block_IPv6_OUTPUT=false
 
 # Clear the log after booting
 ClearList="

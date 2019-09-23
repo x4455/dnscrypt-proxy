@@ -129,16 +129,10 @@ install_dnscrypt_proxy() {
   CONSTANT="$tmp/constant.sh"
   if [ ! -e $CONSTANT ]; then
     CONSTANT=$TMPDIR/constant.sh
-    source $CONSTANT
   else
-    source $CONSTANT
-    nowmd5="9b15ec5f1aad73080af2765270d52ec5"
-    check_md5="`md5sum $CONSTANT`"
-    if [ "$check_md5" != "$nowmd5" ]; then
-      ui_print "(!) If there is a problem, please check the constant first. Uninstalling and reinstalling is a good solution."
-      source $TMPDIR/constant.sh
-    fi
+    source $TMPDIR/constant.sh
   fi
+  source $CONSTANT
 
   OLD_CONFIG_PATH=${CONFIG%/*}
   NEW_CONFIG_PATH=$OLD_CONFIG_PATH
@@ -200,16 +194,6 @@ if $VKSEL; then
 else
   ui_print "(i) Mod will not start after boot."
   LATESTARTSERVICE=false
-fi
-ui_print " "
-
-ui_print "- Use test version? This may solve and bring problems."
-ui_print " Vol Key+ = Yes / Vol Key- = No"
-if $VKSEL; then
-ui_print " Use test version"
-cp -af $TMPDIR/script-alpha.sh $MODPATH/system/xbin/dnsproxy
-else
-ui_print " Use stable version"
 fi
 }
 

@@ -5,90 +5,68 @@
 [[ "$#" -eq 0 ]] && { echo "! Null input !"; exit 1; }
 [[ $(id -u) -ne 0 ]] && { echo "! Need root !"; exit 1; }
 
-[ -f /proc/net/ip6_tables_names ] && { ipt_setIPv6='true'; }||{ ipt_setIPv6='false'; }
+V4LPT=53; V6LPT=53
+ipt_block_INPUT=false
+ipt_block_IPv6_OUTPUT=false
+
 
 MODPATH=/data/adb/modules/dnscrypt-proxy
 source $MODPATH/constant.sh
 
-function gconf(){ grep $1 $CONFIG; }
-
-IPv4_LISTEN_PORT="`gconf 'listen_addresses' | awk -F "'" '{print $2}' | awk -F ":" '{print $2}'`"
-IPv6_LISTEN_PORT="`gconf 'listen_addresses' | awk -F "'" '{print $4}' | awk -F "]:" '{print $2}'`"
-RESOLVER="`gconf 'fallback_resolver' | awk -F "[':]" '{print $2}'`"
-
-### Get whitelist
- i=0;
-  for TARGET in $IPv4_whitelist '1.1.1.1' '1.0.0.1'
-  do
-    Wlist[i]=$TARGET; ((i++))
-  done
 ### Load iptables rules
 
-function ip4trules_wlist_load()
+function iptrules_load()
 {
- IPS=$1;
-  for IP in ${Wlist[*]}
-  do
-    echo "W: $IP $IPS"
-    for IPP in 'udp' 'tcp'
-    do
-      $IPTABLES -t nat $IPS OUTPUT -p $IPP -d $IP --dport 53 -j ACCEPT
-    done
-  done
-}
-
-function ip4trules_load()
-{
- IPS=$1;
+ IPS=$2; LIP=$3; LPT=$4
   for IPP in 'udp' 'tcp'
   do
-    echo "IPTABLES $IPP $IPv4_LISTEN_PORT $IPS"
-    $IPTABLES -t nat $IPS OUTPUT -p $IPP ! -d $RESOLVER --dport 53 -j DNAT --to-destination 127.0.0.1:$IPv4_LISTEN_PORT
+    echo "$1 $IPS $IPP $LPT"
+    $1 -t nat $IPS PREROUTING -p $IPP --dport 53 -j DNAT --to-destination $LIP:$LPT
+    $1 -t nat $IPS PREROUTING -p $IPP -m owner --uid-owner 0 --dport 53 -j ACCEPT
   done
+  if [ "$ipt_block_INPUT" == 'true' ]; then
+    echo "Block INPUT $IPS"
+    block_rules $IPTABLES $IPS INPUT 53
+    block_rules $IP6TABLES $IPS INPUT 53
+    if [ -n "$(echo $whitelist | grep -E '([0-255]\.){3}[0-255]')" ]; then
+      accept_rules $IPTABLES $IPS INPUT 53
+    fi
+  fi
 }
 
 function ip6trules_load()
 {
- IPS=$1;
-  if [ "$ipt_setIPv6" == 'true' ]; then
-    if [ "$ipt_blockIPv6" == "true" ]; then
-      blockIPv6 $IPS
-    else
-      for IPP in 'udp' 'tcp'
-      do
-        echo "IP6TABLES $IPP $IPv6_LISTEN_PORT $IPS"
-        $IP6TABLES -t nat $IPS OUTPUT -p $IPP --dport 53 -j DNAT --to-destination [::1]:$IPv6_LISTEN_PORT
-      done
-    fi
+  if [ "$ipt_block_IPv6_OUTPUT" == 'true' ]; then
+    echo "Block IPv6 OUTPUT $1"
+    block_rules $IP6TABLES $1 OUTPUT 53
   else
-    echo 'Skip IPv6'
+    iptrules_load $IP6TABLES $1 '[::1]' $V6LPT
   fi
 }
 
-function blockIPv6()
+function accept_rules()
 {
- echo "Block IPv6 $1";
-  $IP6TABLES -t filter $1 OUTPUT -p udp --dport 53 -j DROP
-  $IP6TABLES -t filter $1 OUTPUT -p tcp --dport 53 -j REJECT --reject-with tcp-reset
+for IP in $whitelist
+do
+  $1 -t filter $2 $3 -p udp -d $IP --dport $4 -j ACCEPT
+  $1 -t filter $2 $3 -p tcp -d $IP --dport $4 -j ACCEPT
+done
+}
+
+function block_rules()
+{
+  $1 -t filter $2 $3 -p udp --dport $4 -j DROP
+  $1 -t filter $2 $3 -p tcp --dport $4 -j REJECT --reject-with tcp-reset
 }
 
 # Check rules
-function ip4trules_wlist_check()
-{
- r=0;
-  for IPP in 'udp' 'tcp'
-  do
-    [ -n "`$IPTABLES -n -t nat -L OUTPUT | grep "ACCEPT.*$IPP.*dpt:53"`" ] && ((r++))
-  done
-[ $r -gt 0 ] && return 0
-}
-
 function iptrules_check()
 {
- IPT=$IPTABLES; IPA='127.0.0.1'; r=0
+ r=0
   for IPP in 'udp' 'tcp'
   do
-    [ -n "`$IPT -n -t nat -L OUTPUT | grep "DNAT.*$IPP.*dpt:53.*to:$IPA:$IPv4_LISTEN_PORT"`" ] && ((r++))
+    [ -n "`$IPTABLES -n -t nat -L PREROUTING | grep "DNAT.*$IPP.*dpt:53.*to:"`" ] && ((r++))
+    [ -n "`$IPTABLES -n -t nat -L PREROUTING | grep "ACCEPT.*$IPP.*owner.*UID.*dpt:53"`" ] && ((r++))
   done
 [ $r -gt 0 ] && return 0
 }
@@ -101,18 +79,14 @@ function core_check()
 # Main
 function iptrules_on()
 {
-  ip4trules_load '-I'
+  iptrules_load $IPTABLES '-I' '127.0.0.1' $V4LPT
   ip6trules_load '-I'
-  ip4trules_wlist_load '-I'
 }
 
 function iptrules_off()
 {
-  while ip4trules_wlist_check; do
-    ip4trules_wlist_load '-D'
-  done
   while iptrules_check; do
-    ip4trules_load '-D'
+    iptrules_load $IPTABLES '-D' '127.0.0.1' $V4LPT
     ip6trules_load '-D'
   done
 }
@@ -123,9 +97,11 @@ function core_start()
 {
   core_check && killall $CORE_BINARY
   sleep 1
-  echo "- Core online $(date +'%d|%r')"
+  echo "- Starting $(date +'%d/%r')"
   $CORE_BOOT &
-  sleep 12
+  if [ ! core_check ]; then
+    echo '(!) Fails: Core not working'; exit 1
+  fi
 }
 
 ### Processing options
@@ -136,20 +112,15 @@ function core_start()
     core_start
     if core_check; then
       iptrules_on
-    else
-      echo '(!)Fails:Core is not working'; exit 1
     fi
   ;;
   # Boot Core only
   -start-core)
     core_start
-    if [ ! core_check ]; then
-      echo '(!)Fails:Core is not working'; exit 1
-    fi
   ;;
   # Stop
   -stop)
-    echo '- Stop proxy'
+    echo '- Stoping'
     iptrules_off
     killall $CORE_BINARY
     echo '- Done'
@@ -168,26 +139,30 @@ function core_start()
 cat <<EOD
 Usage:
  -start
-   Start service
+   Start Service
  -stop
-   Stop service
+   Stop Service
  -status
-   Proxy Status
+   Service Status
  -start-core
    Boot core only
- -reset-rules
+ -reset
    Reset iptables
 EOD
   ;;
 #### Advanced Features
   # Clean iptables rules
-  -reset-rules)
+  -reset)
     iptables -t nat -F OUTPUT
     ip6tables -t nat -F OUTPUT
     sleep 1
-    blockIPv6 '-D'
+    iptables -t filter -F INPUT
+    ip6tables -t filter -F INPUT
+    sleep 1
+    iptables -t filter -F OUTPUT
+    ip6tables -t filter -F OUTPUT
     killall $CORE_BINARY
-  echo '- Done'
+    echo '- Done'
   ;;
   # Pass command
   *)

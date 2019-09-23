@@ -13,6 +13,10 @@ www.google.*             forcesafesearch.google.com
 
 www.bing.com             strict.bing.com
 
+yandex.ru                familysearch.yandex.ru
+
+=duckduckgo.com          safe.duckduckgo.com
+
 www.youtube.com          restrictmoderate.youtube.com
 m.youtube.com            restrictmoderate.youtube.com
 youtubei.googleapis.com  restrictmoderate.youtube.com
