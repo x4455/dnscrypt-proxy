@@ -11,7 +11,7 @@ SKIPMOUNT=false
 PROPFILE=false
 
 # Set to true if you need post-fs-data script
-POSTFSDATA=false
+POSTFSDATA=true
 
 # Set to true if you need late_start service script
 LATESTARTSERVICE=true
@@ -90,118 +90,93 @@ REPLACE="
 
 version=$(grep_prop version $TMPDIR/module.prop | awk -F " " '{print $1}')
 print_modname() {
-  ui_print "*******************************"
-  ui_print " DNSCrypt-Proxy 2"
-  ui_print " $version"
-  ui_print " By x4455" 
-  ui_print "*******************************"
+	ui_print "*******************************"
+	ui_print " DNSCrypt-Proxy 2"
+	ui_print " $version"
+	ui_print " By x4455" 
+	ui_print "*******************************"
 }
 
 on_install() {
   # The following is the default implementation: extract $ZIPFILE/system to $MODPATH
   # Extend/change the logic to whatever you want
-  ui_print "- Extracting module files"
-  unzip -o "$ZIPFILE" 'system/*' -d $MODPATH >&2
+	ui_print "- Extracting module files"
+	unzip -o "$ZIPFILE" 'system/*' -d $MODPATH >&2
 
-  [ $API -ge 28 ] && {
-  ui_print "***************"
-  ui_print '(!) Please close the Private DNS to prevent conflict'
-  ui_print "***************"
-  }
+	[ $API -ge 28 ] && {
+	ui_print "***************"
+	ui_print '(!) Please close the Private DNS to prevent conflict'
+	ui_print "***************"
+	}
 
-  imageless_magisk && { tmp="$NVBASE/modules/$MODID"; }||{ tmp="/sbin/.magisk/img/$MODID"; }
+	unzip -oj "$ZIPFILE" 'binary/*' -d $TMPDIR >&2
+	unzip -o "$ZIPFILE" 'config/*' -d $TMPDIR >&2
 
-  install_dnscrypt_proxy
+	install_dnscrypt_proxy
 }
 
 
 install_dnscrypt_proxy() {
-  case $ARCH in
-  arm|arm64|x86|x64)
-    BINARY_PATH=$TMPDIR/dnscrypt-proxy-$ARCH;;
-  *)
-    abort "(!) $ARCH are unsupported architecture"
-  esac
+	case $ARCH in
+	arm|arm64|x86|x64)
+		BINARY_PATH=$TMPDIR/dnscrypt-proxy-$ARCH;;
+	*)
+		abort "(!) $ARCH are unsupported architecture"
+	esac
 
-  unzip -oj "$ZIPFILE" 'binary/*' -d $TMPDIR >&2
+	imageless_magisk && { CONSTANT="$NVBASE/modules/$MODID/constant.sh"; }||{ CONSTANT="/sbin/.magisk/img/$MODID/constant.sh"; }
+	if [ ! -e $CONSTANT ]; then
+		CONSTANT=$TMPDIR/constant.sh
+	else
+		source $TMPDIR/constant.sh
+	fi
+	source $CONSTANT
 
+	OLD_CONFIG=${CONFIG%/*}
+	NEW_CONFIG=$OLD_CONFIG
+	EXAMPLE_CONFIG=$TMPDIR/config
+	LISTEN_PORT=6453
 
-  CONSTANT="$tmp/constant.sh"
-  if [ ! -e $CONSTANT ]; then
-    CONSTANT=$TMPDIR/constant.sh
-  else
-    source $TMPDIR/constant.sh
-  fi
-  source $CONSTANT
+	mkdir -p $MODPATH/system/xbin 2>/dev/null
 
-  OLD_CONFIG_PATH=${CONFIG%/*}
-  NEW_CONFIG_PATH=$OLD_CONFIG_PATH
-  EXAMPLE_CONFIG_PATH=$TMPDIR/config
-  LISTEN_PORT=5354
-
-  unzip -o "$ZIPFILE" 'config/*' -d $TMPDIR >&2
-
-  mkdir -p $MODPATH/system/xbin 2>/dev/null
-
-  if [ -f "$BINARY_PATH" ]; then
-    ui_print "- Architecture: [$ARCH]"
-    set_perm $BINARY_PATH 0 0 0755
-    ver=$($BINARY_PATH -version)
-    ui_print "- Core version: [$ver]"
-    sed -i -e "s/<VER>/${ver}-${ARCH}/g" $TMPDIR/module.prop
-  else
-    abort "(!) $ARCH Binary file missing"
-  fi
-  ui_print "***************"
+	if [ -f "$BINARY_PATH" ]; then
+		ui_print "- Architecture: [$ARCH]"
+		set_perm $BINARY_PATH 0 0 0755
+		ver=$($BINARY_PATH -version)
+		ui_print "- Core version: [$ver]"
+		sed -i -e "s/<VER>/${ver}-${ARCH}/g" $TMPDIR/module.prop
+	else
+		abort "(!) $ARCH Binary file missing"
+	fi
+	ui_print "***************"
 
 # Config
-  if [ ! -d "$EXAMPLE_CONFIG_PATH" ]; then
-    abort "(!) Example config file is missing"
-  fi
+	if [ ! -d "$EXAMPLE_CONFIG" ]; then
+		abort "(!) Example config file is missing"
+	fi
 
-  if [ $(ls $OLD_CONFIG_PATH | wc -l) -eq 0 ]; then
-    NEW_INSTALL='true'
-    ui_print "- Create config path"
-    mkdir -p $NEW_CONFIG_PATH 2>/dev/null
-    ui_print "- Copy the example config file"
-    cp -rf $EXAMPLE_CONFIG_PATH/* $NEW_CONFIG_PATH
-    cp -f $EXAMPLE_CONFIG_PATH/example-dnscrypt-proxy.toml $NEW_CONFIG_PATH/dnscrypt-proxy.toml
-  else
-    cp -f $EXAMPLE_CONFIG_PATH/example-dnscrypt-proxy.toml $NEW_CONFIG_PATH/example-dnscrypt-proxy.toml
-  fi
+	if [ $(ls $OLD_CONFIG | wc -l) -eq 0 ]; then
+		ui_print "- Create config path"
+		mkdir -p $NEW_CONFIG 2>/dev/null
+		ui_print "- Copy the example config file"
+		cp -rf $EXAMPLE_CONFIG/* $NEW_CONFIG
+		cp -f $EXAMPLE_CONFIG/example-dnscrypt-proxy.toml $NEW_CONFIG/dnscrypt-proxy.toml
+		sed -i -e "s/127.0.0.1:53/127.0.0.1:${LISTEN_PORT}/g" $NEW_CONFIG/dnscrypt-proxy.toml
+		sed -i -e "s/\[::1\]:53/\[::1\]:${LISTEN_PORT}/g" $NEW_CONFIG/dnscrypt-proxy.toml
+	else
+		cp -f $EXAMPLE_CONFIG/example-dnscrypt-proxy.toml $NEW_CONFIG/example-dnscrypt-proxy.toml
+	fi
 # Set files
-  cp -af $CONSTANT $MODPATH/constant.sh
-  sed -i -e "s/\(^MODPATH\=\).*$/\1${tmp//\//\\\/}/" $TMPDIR/script.sh
-  cp -af $TMPDIR/script.sh $MODPATH/system/xbin/dnsproxy
-  cp -af $BINARY_PATH $MODPATH/$CORE_BINARY
-  [ "$NEW_INSTALL" == 'true' ] && {
-  sed -i -e "s/127.0.0.1:53/127.0.0.1:${LISTEN_PORT}/g" $NEW_CONFIG_PATH/dnscrypt-proxy.toml;
-  sed -i -e "s/\[::1\]:53/\[::1\]:${LISTEN_PORT}/g" $NEW_CONFIG_PATH/dnscrypt-proxy.toml; }
-
-  if [ ! -L $OLD_CONFIG_PATH/constant.conf ]; then
-    ln -s $MODPATH/constant.sh $NEW_CONFIG_PATH/constant.conf
-  fi
-
-# Set boot
-source $TMPDIR/selector.sh
-ui_print " "
-ui_print "- Start after boot, Yes or No?"
-ui_print " Vol Key+ = Yes / Vol Key- = No"
-ui_print " "
-
-if $VKSEL; then
-  ui_print "(i) Mod will start after boot."
-else
-  ui_print "(i) Mod will not start after boot."
-  LATESTARTSERVICE=false
-fi
+	cp -af $CONSTANT $MODPATH/constant.sh
+	cp -af $TMPDIR/script.sh $MODPATH/system/xbin/dnsproxy
+	cp -af $BINARY_PATH $MODPATH/$CORE_BINARY
 }
 
 set_permissions() {
   # The following is the default rule, DO NOT remove
-  set_perm_recursive $MODPATH 0 0 0755 0644
-  set_perm $MODPATH/$CORE_BINARY 0 2000 0755
-  set_perm_recursive $MODPATH/system/xbin 0 0 0755 0755
+	set_perm_recursive $MODPATH 0 0 0755 0644
+	set_perm $MODPATH/$CORE_BINARY 0 2000 0755
+	set_perm_recursive $MODPATH/system/xbin 0 0 0755 0755
 
   # Here are some examples:
   # set_perm_recursive  $MODPATH/system/lib       0     0       0755      0644

@@ -1,6 +1,6 @@
 id=dnscrypt-proxy
 name=DNSCrypt-Proxy 2
-version=v2.9.0 (<VER>)
-versionCode=290
+version=v2.9.1 (<VER>)
+versionCode=291
 author=x4455
 description=A flexible DNS proxy, with support for modern encrypted DNS protocols such as DNSCrypt v2 and DNS-over-HTTP/2.

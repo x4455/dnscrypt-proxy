@@ -21,7 +21,7 @@ Just flash and forget.
  Common command: `-start` `-stop` `-usage`
 
 ## Configuration (post-installing)
-- Main config, located on `/data/media/dnscrypt-proxy`
+- Main config, located on `/data/media/0/dnscrypt-proxy`
 - Script config, located on `/data/adb/modules/dnscrypt-proxy/constant.sh`
 - For more detailed configuration please refer to [official documentation](https://github.com/jedisct1/dnscrypt-proxy/wiki/Configuration) Or use [other presets](https://github.com/jedisct1/dnscrypt-proxy/wiki/Public-blacklists)
 

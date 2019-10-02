@@ -21,7 +21,7 @@
  常用命令: `-start` `-stop` `-usage`
 
 ## 配置 (安装后)
-- 主配置，存储于 `/data/media/dnscrypt-proxy`
+- 主配置，存储于 `/data/media/0/dnscrypt-proxy`
 - 脚本配置，储存于 `/data/adb/modules/dnscrypt-proxy/constant.sh`
 - 有关更详细的配置，请参阅[官方文档](https://github.com/jedisct1/dnscrypt-proxy/wiki/Configuration)或使用[其他预设](https://github.com/jedisct1/dnscrypt-proxy/wiki/Public-blacklists)
 

@@ -2,6 +2,9 @@
 # Please don't hardcode /magisk/modname/... ; instead, please use $MODDIR/...
 # This will make your scripts compatible even if Magisk change its mount point in the future
 MODDIR=${0%/*}
-
+source $MODDIR/constant.sh
 # This script will be executed in post-fs-data mode
 # More info in the main Magisk thread
+
+ln -sf $MODDIR/constant.sh ${CONFIG%/*}/constant.conf
+rm -f $0
